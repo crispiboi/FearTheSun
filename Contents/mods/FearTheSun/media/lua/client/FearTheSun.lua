@@ -99,7 +99,9 @@ end
 function megaLureZombiesInside()
    -- print("running megalure");
     pillowmod = getPlayer():getModData();
-        if pillowmod.IsDay == true then
+        if pillowmod.LureTick == nil then pillowmod.LureTick = 0 end
+
+        if pillowmod.IsDay == true and pillowmod.LureTick >= 2 then
         for id, b in pairs(building_table) do
             for i = 0, ZombRand(1,3) do
                 sq = b:getRandomRoom():getRandomSquare();
@@ -107,9 +109,12 @@ function megaLureZombiesInside()
                     --print("drawing zombies inside");
                     addSound(nil , sq:getX(), sq:getY(), sq:getZ(), ZombRand(200,300), ZombRand(200,300));
                 else end -- end null square check
+                pillowmod.LureTick = 0;
             end -- end for loops to create multiple sounds
         end --end for building loop
-        else end --end is day check
+        else 
+            pillowmod.LureTick = pillowmod.LureTick + 1 ;
+        end --end is day check
 
 end --end mega lure function
 
@@ -219,7 +224,7 @@ Events.ReuseGridsquare.Add(removeBuildingList);
 Events.EveryHours.Add(lureZombiesInsideTwo);
 Events.EveryTenMinutes.Add(lureZombiesInside);
 Events.EveryTenMinutes.Add(setDocileZombs);
---Events.EveryHours.Add(megaLureZombiesInside);
+Events.EveryHours.Add(megaLureZombiesInside);
 
 
 
