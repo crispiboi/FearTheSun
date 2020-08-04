@@ -12,7 +12,7 @@ function addBuildingList(_square)
                 then building_table[sq:getBuilding()] = sq:getBuilding();
             else end
     end   
-end 
+end --end add building function
 
 --as squares are unloaded, remove the associated buildings from the table.
 function removeBuildingList(_square)
@@ -22,7 +22,7 @@ function removeBuildingList(_square)
                 then building_table[sq:getBuilding()] = nil;
             else end
     end   
-end 
+end --end remove building function
 
 --calc the IsDay variable
 function calculateHour()
@@ -32,7 +32,7 @@ function calculateHour()
         pillowmod.IsDay = true
     else pillowmod.IsDay = false end 
 
-end 
+end --end calc hour function 
 
 -- This function iterates through all the building that are currently loaded and plays 5-10 sounds inside to draw zombies
 function lureZombiesInside()
@@ -40,25 +40,60 @@ function lureZombiesInside()
     pillowmod = getPlayer():getModData();
     if pillowmod.IsDay == true then
         for id, b in pairs(building_table) do
-             sq = b:getRandomRoom():getRandomSquare();
-            if sq ~= nil
-                then
-                    --print("drawing zombies inside");
-                    addSound(nil , sq:getX(), sq:getY(), sq:getZ(), 300, 300);
-                else end
+            for i = 0, ZombRand(1,3) do
+                sq = b:getRandomRoom():getRandomSquare();
+                if sq ~= nil
+                    then
+                        --print("drawing zombies inside");
+                        addSound(nil , sq:getX(), sq:getY(), sq:getZ(), ZombRand(25,50), ZombRand(25,50));
+                else end -- end null square check
+            end -- end for loops to create multiple sounds
+        end --end for building loop
+    else end --end is day check
+
+end --end lure function
+
+--directly path the zombies to the nearst building based on calcClosestBuilding
+function lureZombiesInsideTwo()
+    pillowmod = getPlayer():getModData();
+    if pillowmod.IsDay == true then
+        local zlist = getPlayer():getCell():getZombieList();
+        if(zlist ~= nil) then
+            for i=0, zlist:size()-1 do
+                z = zlist:get(i);
+                if z:getModData().docile then
+                    return
+                else
+                    sourcesq = z:getCurrentSquare();
+                    targetsq = calcClosestBuilding(sourcesq);
+                    z:pathToLocation(targetsq:getX(), targetsq:getY(), targetsq:getZ());
+                    z:setVariable("bPathfind", false);
+                    z:setVariable("bMoving", true);
+                end
+            end
         end 
-    else end 
+    end 
 
---    if pillowmod.IsDay then
---        for id, sq in pairs(inside_table) do
---            addSound(nil , sq:getX(), sq:getY(), sq:getZ(), ZombRand(100,200), ZombRand(100,200));
---            if verboseDebug then
---            end
---        end
---    else end
---
+end 
 
-end
+-- calculate the closeset building in the list
+function calcClosestBuilding(_square)
+    sourcesq = _square ;
+    local closest = nil;
+    local closestDist = 1000000;
+    for id, b in pairs(building_table) do
+        sq = b:getRandomRoom():getRandomSquare();
+        if sq ~= nil
+            then 
+            local dist = IsoUtils.DistanceTo(sourcesq:getX(), sourcesq:getY(), sq:getX() , sq:getY())
+            if dist < closestDist then
+                closest = sq;
+                closestDist = dist;
+            end
+        end
+    end 
+    return closest
+end 
 
 --this function is extra loud to draw zombies more because sometimes they're too far to hear it
 function megaLureZombiesInside()
@@ -66,15 +101,17 @@ function megaLureZombiesInside()
     pillowmod = getPlayer():getModData();
         if pillowmod.IsDay == true then
         for id, b in pairs(building_table) do
-            sq = b:getRandomRoom():getRandomSquare();
-            if sq ~= nil then
-                --print("drawing zombies inside");
-                addSound(nil , sq:getX(), sq:getY(), sq:getZ(), 600, 600);
-            else end
-        end 
-        else end 
+            for i = 0, ZombRand(1,3) do
+                sq = b:getRandomRoom():getRandomSquare();
+                if sq ~= nil then
+                    --print("drawing zombies inside");
+                    addSound(nil , sq:getX(), sq:getY(), sq:getZ(), ZombRand(200,300), ZombRand(200,300));
+                else end -- end null square check
+            end -- end for loops to create multiple sounds
+        end --end for building loop
+        else end --end is day check
 
-end
+end --end mega lure function
 
 function callZombsOut()
     --this function is too laggy. Figure out a better way to handle this.
@@ -87,7 +124,8 @@ function callZombsOut()
         end
     else end
 
-end 
+end --end call zomb out function
+
 
 --this should definitely query the whole cell zombie list
 --set them to inactive when they are inside a building and it's daytime.
@@ -98,19 +136,23 @@ function setDocileZombs()
             for i=0, zlist:size()-1 do
                 if zlist:get(i):getCurrentSquare():isOutside() == false and pillowmod.IsDay
                     then 
-                        if ZombRand(2)+1 == ZombRand(2)+1 
+                        if ZombRand(4)+1 == ZombRand(4)+1 
                             and  (zlist:get(i):getModData().docile == nil
                                 or zlist:get(i):getModData().docile == false)
                         then 
-                            zlist:get(i):setMoving(false);
-                            zlist:get(i):setFakeDead(true);
-                            zlist:get(i):getModData().docile = true
+                            z = zlist:get(i);
+                            z:setMoving(false);
+                            z:setFakeDead(true);
+                            z:getModData().docile = true
+                            z:setVariable("bMoving", false);
                         elseif  (zlist:get(i):getModData().docile == nil
                                 or zlist:get(i):getModData().docile == false)
                         then 
-                            zlist:get(i):setMoving(false);
-                            zlist:get(i):setUseless(true); 
-                            zlist:get(i):getModData().docile = true
+                            z = zlist:get(i);
+                            z:setMoving(false);
+                            z:setUseless(true); 
+                            z:getModData().docile = true
+                            z:setVariable("bMoving", false);
                         end
                 else 
 
@@ -127,11 +169,18 @@ function setActiveZombs()
             for i=0, zlist:size()-1 do
                 if pillowmod.IsDay == false
                     then 
-                        zlist:get(i):setMoving(true);
-                        zlist:get(i):setFakeDead(false);
-                        zlist:get(i):setUseless(false); 
-                        zlist:get(i):getModData().docile = false
- 
+                        z =zlist:get(i);
+                        z:setMoving(true);
+                        z:setFakeDead(false);
+                        z:setUseless(false); 
+                        z:getModData().docile = false;
+                elseif pillowmod.IsDay == true and zlist:get(i):getCurrentSquare():isOutside() == true
+                    then 
+                        z =zlist:get(i);
+                        z:setMoving(true);
+                        z:setFakeDead(false);
+                        z:setUseless(false); 
+                        z:getModData().docile = false;
                 else end
             end
         end
@@ -167,9 +216,12 @@ Events.LoadGridsquare.Add(addBuildingList);
 Events.ReuseGridsquare.Add(removeBuildingList);
 
 --luring and chill zombie out functions every 10 minute because its core mod functionality
+Events.EveryHours.Add(lureZombiesInsideTwo);
 Events.EveryTenMinutes.Add(lureZombiesInside);
 Events.EveryTenMinutes.Add(setDocileZombs);
-Events.EveryHours.Add(megaLureZombiesInside);
+--Events.EveryHours.Add(megaLureZombiesInside);
+
+
 
 --waking zombie functions, every hour since it really should happen just once unlesss player moves to a new cell
 Events.EveryHours.Add(setActiveZombs);
