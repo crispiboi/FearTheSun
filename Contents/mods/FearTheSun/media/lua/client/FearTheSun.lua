@@ -76,6 +76,11 @@ function lureZombiesInsideTwo()
 
 end 
 
+function goInside(zombie)
+z = zombie;
+end --end goinside function
+
+
 -- calculate the closeset building in the list
 function calcClosestBuilding(_square)
     sourcesq = _square ;
@@ -150,6 +155,7 @@ function setDocileZombs()
                             z:setFakeDead(true);
                             z:getModData().docile = true
                             z:setVariable("bMoving", false);
+                            z:DoZombieStats();
                         elseif  (zlist:get(i):getModData().docile == nil
                                 or zlist:get(i):getModData().docile == false)
                         then 
@@ -158,7 +164,9 @@ function setDocileZombs()
                             z:setUseless(true); 
                             z:getModData().docile = true
                             z:setVariable("bMoving", false);
+                            z:DoZombieStats();
                         end
+                        
                 else 
 
                 end
@@ -179,6 +187,7 @@ function setActiveZombs()
                         z:setFakeDead(false);
                         z:setUseless(false); 
                         z:getModData().docile = false;
+                        z:DoZombieStats();
                 elseif pillowmod.IsDay == true and zlist:get(i):getCurrentSquare():isOutside() == true
                     then 
                         z =zlist:get(i);
@@ -186,6 +195,7 @@ function setActiveZombs()
                         z:setFakeDead(false);
                         z:setUseless(false); 
                         z:getModData().docile = false;
+                        z:DoZombieStats();
                 else end
             end
         end
