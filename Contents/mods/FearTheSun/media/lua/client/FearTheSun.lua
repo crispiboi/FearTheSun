@@ -168,7 +168,7 @@ end
 
 function zNightRoutine(zombie)
 
-        if zCounter == 100
+        if pillowmod.zCounter  == 100
             then 
             zombie:setMoving(true);
             zombie:setVariable("bMoving", true);
@@ -176,6 +176,7 @@ function zNightRoutine(zombie)
             zombie:setUseless(false); 
             zombie:getModData().docile = false;
             zombie:DoZombieStats();
+            zResetCommand(zombie) ;
         else end
 end
 
