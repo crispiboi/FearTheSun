@@ -23,6 +23,16 @@ function removeBuildingList(_square)
     end   
 end --end remove building function
 
+function isBuildingListEmpty()
+    count = 0
+    for i, v in pairs(building_table) do 
+    count = count + 1;
+    end
+    if count ~= 0 then return false
+    else return true
+    end
+end
+
 --calc the IsDay variable
 function calculateHour()
     pillowmod = getPlayer():getModData();
@@ -47,17 +57,21 @@ function calcClosestBuilding(_square)
     sourcesq = _square ;
     local closest = nil;
     local closestDist = 1000000;
-    for id, b in pairs(building_table) do
-        sq = b:getRandomRoom():getRandomSquare();
-        if sq ~= nil
-            then 
-            local dist = IsoUtils.DistanceTo(sourcesq:getX(), sourcesq:getY(), sq:getX() , sq:getY())
-            if dist < closestDist then
-                closest = sq;
-                closestDist = dist;
-            end
-        end
-    end 
+    if isBuildingListEmpty() == true
+        then closest = sourcesq;
+        else 
+            for id, b in pairs(building_table) do
+                sq = b:getRandomRoom():getRandomSquare();
+                if sq ~= nil
+                    then 
+                    local dist = IsoUtils.DistanceTo(sourcesq:getX(), sourcesq:getY(), sq:getX() , sq:getY())
+                    if dist < closestDist then
+                        closest = sq;
+                        closestDist = dist;
+                    end
+                end
+            end 
+        end 
     return closest
 end 
 
@@ -141,19 +155,16 @@ function zDayRoutine(zombie)
             zombie:setUseless(true); 
             zombie:getModData().docile = true;
             zombie:DoZombieStats();
-    -- day, outside, lure via sound 
-    elseif (zombieHasCommand(zombie) == false and isZombieOutside(zombie) and pillowmod.zCounter >= 300 and pillowmod.zCounter <=400 ) 
+    -- day, outside, lure via sound or location
+    elseif (zombieHasCommand(zombie) == false and isZombieOutside(zombie) and pillowmod.zCounter >= 300 and pillowmod.zCounter <=1099 ) 
         or(zombieHasCommand(zombie) == false and isZombieOutside(zombie) and isZombieIdle(zombie))
-        then
+        then 
             zombie:getModData().commandSent = true;
             zombie:getModData().docile = false;
-            lureZombiePathSound(zombie);
-    -- day, outside, sound has not worked, path location 
-    elseif zombieHasCommand(zombie) == false and isZombieOutside(zombie) and pillowmod.zCounter >= 999 and pillowmod.zCounter <= 1099
-        then
-            zombie:getModData().commandSent = true;
-            zombie:getModData().docile = false;
-            lureZombiePathLocation(zombie);
+            if ZombRand(1)==0
+                then lureZombiePathSound(zombie);
+                else lureZombiePathLocation(zombie);
+            end 
     -- day, help un-stuck zombie
     elseif zombieHasCommand(zombie) == false and isZombieOutside(zombie) and pillowmod.zCounter >= 1799 and pillowmod.zCounter <= 1899
         then 
@@ -201,6 +212,9 @@ function smackZombie()
                 end
         end
 end 
+
+function zIgniteZombie(zombie)
+    end 
 
 
 
