@@ -8,8 +8,9 @@ local pillowmod;
 function addBuildingList(_square)
     local sq = _square;
     if sq then 
-            if sq:isOutside() == false
-                then building_table[sq:getBuilding()] = sq:getBuilding();
+            if sq:isOutside() == false then
+                local building = sq:getBuilding();
+                building_table[building] = building;
             else end
     end   
 end --end add building function
