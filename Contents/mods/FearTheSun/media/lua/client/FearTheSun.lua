@@ -2,10 +2,12 @@
 
 building_table = {};
 
+local SPRING, SUMMER, AUTUMN, WINTER = 0,1,2,3;
+
 local pillowmod;
 
 --as squares are loaded, add the associated buildings to a table
-function addBuildingList(_square)
+local function addBuildingList(_square)
     local sq = _square;
     if sq then 
             if sq:isOutside() == false then
@@ -16,7 +18,7 @@ function addBuildingList(_square)
 end --end add building function
 
 --as squares are unloaded, remove the associated buildings from the table.
-function removeBuildingList(_square)
+local function removeBuildingList(_square)
     local sq = _square;
     if sq then 
             if sq:isOutside() == false then 
@@ -25,7 +27,7 @@ function removeBuildingList(_square)
     end   
 end --end remove building function
 
-function isBuildingListEmpty()
+local function isBuildingListEmpty()
     count = 0
     for i, v in pairs(building_table) do 
         count = count + 1;
@@ -37,39 +39,70 @@ function isBuildingListEmpty()
     end
 end
 
+local function getMonth() 
+	local gametime = GameTime:getInstance();
+	return gametime:getMonth();
+end
+
+local function getSeason()
+	--Spring month == 2 or month == 3 or month == 4
+	--Summer month == 5 or month == 6 or month == 7
+	--Autumn month == 8 or month == 9 or month == 10
+	--Winter month == 11 or month == 0 or month == 1
+	local month = getMonth();
+	if month == 2 or month == 3 or month == 4 then
+		return SPRING;
+    elseif month == 5 or month == 6 or month == 7 then
+        return SUMMER;
+    elseif month == 8 or month == 9 or month == 10 then
+        return AUTUMN;
+	else
+		return WINTER;
+	end
+end
+
+local function getIsDay()
+    --spring 6-22
+    --summer 6-23
+    --autumn 6-22
+    --winter 8-18
+    local season = getSeason();
+
+    return (season == SPRING and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 22) or
+    (season == SUMMER and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 22) or
+    (season == AUTUMN and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 22) or
+    (season == WINTER and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 22);
+end
+
 --calc the IsDay variable
-function calculateHour()
+local function calculateHour()
     pillowmod.currentHour = math.floor(math.floor(GameTime:getInstance():getTimeOfDay() * 3600) / 3600);
 
-    if pillowmod.currentHour >= 5 and pillowmod.currentHour <= 19 then
-        pillowmod.IsDay = true
-    else 
-        pillowmod.IsDay = false 
-    end 
+    pillowmod.IsDay = getIsDay();
 end --end calc hour function 
 
 --calc the IsRaining variable
-function calculateRain()
+local function calculateRain()
     if RainManager.isRaining() then
         pillowmod.IsRaining = false;
     end;
 end
 
-function initialise()
+local function initialise()
     pillowmod = getPlayer():getModData();
     calculateHour();
     calculateRain();
 end
 
-function isDay()
+local function isDay()
     return pillowmod.IsDay ~= nil and pillowmod.IsDay;
 end
 
-function isRaining()
+local function isRaining()
     return pillowmod.IsRaining ~= nil and pillowmod.IsRaining;
 end
 
-function updateZCounter()
+local function updateZCounter()
     local playerData = getPlayer():getModData();
     if playerData.zCounter == nil or playerData.zCounter >= 2000
         then playerData.zCounter = 1;
@@ -79,7 +112,7 @@ function updateZCounter()
 end 
 
 -- calculate the closeset building in the list
-function calcClosestBuilding(_square)
+local function calcClosestBuilding(_square)
     sourcesq = _square ;
     local closest = nil;
     local closestDist = 1000000;
@@ -102,27 +135,27 @@ function calcClosestBuilding(_square)
 end 
 
 --lure zombie to closest building using sound
-function lureZombiePathSound(zombie)
+local function lureZombiePathSound(zombie)
         sourcesq = zombie:getCurrentSquare();
         targetsq = calcClosestBuilding(sourcesq);
         zombie:pathToSound(targetsq:getX(), targetsq:getY(), targetsq:getZ());
 end
 
 --lure zombie to closest building using path
-function lureZombiePathLocation(zombie)
+local function lureZombiePathLocation(zombie)
         sourcesq = zombie:getCurrentSquare();
         targetsq = calcClosestBuilding(sourcesq);
         zombie:pathToLocation(targetsq:getX(), targetsq:getY(), targetsq:getZ());
 end
 
-function zombieStop(zombie)
+local function zombieStop(zombie)
         zombie:changeState(ZombieIdleState.instance());
         targetsq = zombie:getCurrentSquare();
         val = ZombRand(-5,5);
         zombie:pathToLocation(targetsq:getX()+val, targetsq:getY()+val, targetsq:getZ());
 end
 
-function isZombieIdle(zombie)
+local function isZombieIdle(zombie)
     if zombie ~= nil and zombie:isMoving() == false then 
         return true;
     else 
@@ -130,7 +163,7 @@ function isZombieIdle(zombie)
     end 
 end
 
-function isSquareOutside(square)
+local function isSquareOutside(square)
     if square:isOutside() == false then 
         return false;
     else 
@@ -138,16 +171,16 @@ function isSquareOutside(square)
     end
 end
 
-function isCharacterOutside(character)
+local function isCharacterOutside(character)
     local currentSquare = character:getCurrentSquare();
     return isSquareOutside(currentSquare);
 end
 
-function zResetCommand(zombieModData)
+local function zResetCommand(zombieModData)
     zombieModData.commandSent = false;
 end 
 
-function zombieHasCommand(zombie)
+local function zombieHasCommand(zombie)
     local zombieModData = zombie:getModData();
 
     if zombieModData.commandSent == nil then 
@@ -157,29 +190,7 @@ function zombieHasCommand(zombie)
     end
 end
 
-function zCheck(zombie)
-    
-    local zombieModData = zombie:getModData();
-
-    --initialize wake tick, decrement it
-    if zombieModData.awakeTick == nil or zombieModData.awakeTick < 0 then 
-        zombieModData.awakeTick = 1;
-    else 
-        zombieModData.awakeTick = zombieModData.awakeTick - 1;
-    end 
-
-    if isCharacterOutside(zombie) == false and zombieModData.awakeTick > 1 then 
-        return;
-    end
-    
-    if isDay() and not isRaining() then
-        zDayRoutine(zombie, zombieModData);
-    else
-        zNightRoutine(zombie, zombieModData);
-    end
-end
-
-function zDayRoutine(zombie, zombieModData)
+local function zDayRoutine(zombie, zombieModData)
     -- day, inside
     if zombieHasCommand(zombie) == false and isCharacterOutside(zombie) == false and pillowmod.zCounter <= 1000
         then 
@@ -209,7 +220,7 @@ function zDayRoutine(zombie, zombieModData)
     else end
 end 
 
-function zNightRoutine(zombie, zombieModData)
+local function zNightRoutine(zombie, zombieModData)
         if pillowmod.zCounter  == 100
             then 
             zombie:setMoving(true);
@@ -222,7 +233,29 @@ function zNightRoutine(zombie, zombieModData)
         else end
 end
 
-function aggroZombie(zombie)
+local function zCheck(zombie)
+    
+    local zombieModData = zombie:getModData();
+
+    --initialize wake tick, decrement it
+    if zombieModData.awakeTick == nil or zombieModData.awakeTick < 0 then 
+        zombieModData.awakeTick = 1;
+    else 
+        zombieModData.awakeTick = zombieModData.awakeTick - 1;
+    end 
+
+    if isCharacterOutside(zombie) == false and zombieModData.awakeTick > 1 then 
+        return;
+    end
+    
+    if isDay() and not isRaining() then
+        zDayRoutine(zombie, zombieModData);
+    else
+        zNightRoutine(zombie, zombieModData);
+    end
+end
+
+local function aggroZombie(zombie)
     local zombieModData = zombie:getModData();
     zombie:setFakeDead(false);
     zombie:setUseless(false); 
@@ -230,7 +263,7 @@ function aggroZombie(zombie)
     zombieModData.awakeTick = 500;
 end
 
-function wakeUpZombiesInTargetsRoom(target)
+local function wakeUpZombiesInTargetsRoom(target)
     if target ~= nil then
         local currentRoom = target:getCurrentSquare():getRoom();
         print("Waking up zombies in room.");
@@ -246,7 +279,7 @@ function wakeUpZombiesInTargetsRoom(target)
     end
 end
 
-function wakeUpZombiesInTargetsBuilding(target)
+local function wakeUpZombiesInTargetsBuilding(target)
     if target ~= nil then
         local currentBuilding = target:getCurrentSquare():getBuilding();
         print("Unlucky! Waking up zombies in building.");
@@ -263,7 +296,7 @@ function wakeUpZombiesInTargetsBuilding(target)
 end
 
 --Each triggering action has a small chance to wake up the whole building
-function rollSetZombieActive(target)
+local function rollSetZombieActive(target)
     local random = ZombRand(1, 100);
     if random < 95 then --95% chance of waking zombies in room
         wakeUpZombiesInTargetsRoom(target);
@@ -272,7 +305,7 @@ function rollSetZombieActive(target)
     end
 end
 
-function onHitOrCollideWithZombie(source, target)
+local function onHitOrCollideWithZombie(source, target)
     --xor, check if collision/hit is between zombie and player
     local onlyOneIsPlayer = source ~= nil and target ~= nil and source:isZombie() ~= target:isZombie();
 
@@ -286,7 +319,7 @@ function onHitOrCollideWithZombie(source, target)
     end
 end
 
-function onMoveWhileInside()
+local function onMoveWhileInside()
     local player = getPlayer();
     if player:isSneaking() == false and isCharacterOutside(player) == false then
         print("Did not sneak while inside");
