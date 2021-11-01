@@ -11,7 +11,7 @@ function addBuildingList(_square)
             if sq:isOutside() == false then
                 local building = sq:getBuilding();
                 building_table[building] = building;
-            else end
+            end
     end   
 end --end add building function
 
@@ -19,19 +19,21 @@ end --end add building function
 function removeBuildingList(_square)
     local sq = _square;
     if sq then 
-            if sq:isOutside() == false
-                then building_table[sq:getBuilding()] = nil;
-            else end
+            if sq:isOutside() == false then 
+                building_table[sq:getBuilding()] = nil;
+            end
     end   
 end --end remove building function
 
 function isBuildingListEmpty()
     count = 0
     for i, v in pairs(building_table) do 
-    count = count + 1;
+        count = count + 1;
     end
-    if count ~= 0 then return false
-    else return true
+    if count ~= 0 then 
+        return false;
+    else 
+        return true;
     end
 end
 
