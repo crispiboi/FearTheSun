@@ -1,4 +1,4 @@
---      based off FearTheRain by Stephanus van Zyl AKA Viceroy                                                                               #
+--based off FearTheRain by Stephanus van Zyl AKA Viceroy
 
 building_table = {};
 
@@ -8,6 +8,7 @@ local pillowmod;
 local initialised = false;
 local stepCounter = 0;
 
+--Modifier constants
 local sneakLoudlyChance = 0.25; --CHANCE: 0.25% chance of waking zombies while sneaking
 local wakeBuildingChance = 2; --CHANCE: 2% chance of waking zombies in building
 local stepLoudlyChance = 5; --CHANCE: 5% chance of waking zombies if you step loudly
@@ -18,10 +19,10 @@ local collisionChance = 75; --CHANCE: 75% chance of waking zombies on collision
 local function addBuildingList(_square)
     local sq = _square;
     if sq then 
-            if sq:isOutside() == false then
-                local building = sq:getBuilding();
-                building_table[building] = building;
-            end
+        if sq:isOutside() == false then
+            local building = sq:getBuilding();
+            building_table[building] = building;
+        end
     end   
 end --end add building function
 
@@ -36,20 +37,43 @@ local function removeBuildingList(_square)
 end --end remove building function
 
 local function isBuildingListEmpty()
-    count = 0
+    count = 0;
     for i, v in pairs(building_table) do 
         count = count + 1;
     end
-    if count ~= 0 then 
-        return false;
-    else 
-        return true;
-    end
+    return count == 0;
 end
+
+-- calculate the closeset building in the list
+local function calcClosestBuilding(_square)
+    sourcesq = _square ;
+    local closest = nil;
+    local closestDist = 1000000;
+    if isBuildingListEmpty() == true
+        then closest = sourcesq;
+        else 
+            for id, b in pairs(building_table) do
+                sq = b:getRandomRoom():getRandomSquare();
+                if sq ~= nil
+                    then 
+                    local dist = IsoUtils.DistanceTo(sourcesq:getX(), sourcesq:getY(), sq:getX() , sq:getY())
+                    if dist < closestDist then
+                        closest = sq;
+                        closestDist = dist;
+                    end
+                end
+            end 
+        end 
+    return closest
+end 
 
 local function probabilityCheck(percentageTrue)
     local random = ZombRand(1,1000);
     return random <= percentageTrue * 10;
+end
+
+local function coinFlip()
+    return ZombRand(1) == 0;
 end
 
 local function getMonth() 
@@ -75,16 +99,16 @@ local function getSeason()
 end
 
 local function getIsDay()
-    --spring 6-22
-    --summer 6-23
-    --autumn 6-22
-    --winter 8-18
+    --spring 6-21
+    --summer 6-22
+    --autumn 6-21
+    --winter 8-17
     local season = getSeason();
 
-    return (season == SPRING and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 22) or
+    return (season == SPRING and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 21) or
     (season == SUMMER and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 22) or
-    (season == AUTUMN and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 22) or
-    (season == WINTER and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 22);
+    (season == AUTUMN and pillowmod.currentHour >= 6 and pillowmod.currentHour <= 21) or
+    (season == WINTER and pillowmod.currentHour >= 8 and pillowmod.currentHour <= 17);
 end
 
 --calc the IsDay variable
@@ -92,45 +116,47 @@ local function calculateHour()
     pillowmod.currentHour = math.floor(math.floor(GameTime:getInstance():getTimeOfDay() * 3600) / 3600);
 
     pillowmod.IsDay = getIsDay();
-end --end calc hour function 
+end
 
 --calc the IsRaining variable
 local function calculateRain()
     if RainManager.isRaining() then
         pillowmod.IsRaining = false;
-    end;
+    end
 end
 
 local function calculateChanceModifier()
     local player = getPlayer();
+    
+    --TODO: maybe add modifier based on skill levels
 
-    local isLucky = player:HasTrait("Lucky");
-    local isUnlucky = player:HasTrait("Lucky");
+    pillowmod.isLucky = player:HasTrait("Lucky");
+    pillowmod.isUnlucky = player:HasTrait("Lucky");
 
-    local isGraceful = player:HasTrait("Graceful");
-    local isClumsy = player:HasTrait("Clumsy");
+    pillowmod.isGraceful = player:HasTrait("Graceful");
+    pillowmod.isClumsy = player:HasTrait("Clumsy");
 
-    local isInconspicuous = player:HasTrait("Inconspicuous");
-    local isConspicuous = player:HasTrait("Conspicuous");
+    pillowmod.isInconspicuous = player:HasTrait("Inconspicuous");
+    pillowmod.isConspicuous = player:HasTrait("Conspicuous");
 
     local luckyModifier = 1;
-    if isLucky then
+    if pillowmod.isLucky then
         luckyModifier = luckyModifier - 0.15;
-    elseif isUnlucky then
+    elseif pillowmod.isUnlucky then
         luckyModifier = luckyModifier + 0.15;
     end
 
     local gracefulModifier = 1;
-    if isGraceful then
+    if pillowmod.isGraceful then
         gracefulModifier = gracefulModifier - 0.1;
-    elseif isClumsy then
+    elseif pillowmod.isClumsy then
         gracefulModifier = gracefulModifier + 0.1;
     end
 
     local conspicuousModifier = 1;
-    if isInconspicuous then
+    if pillowmod.isInconspicuous then
         conspicuousModifier = conspicuousModifier - 0.1;
-    elseif isClumsy then
+    elseif pillowmod.isClumsy then
         conspicuousModifier = conspicuousModifier + 0.1;
     end
 
@@ -173,29 +199,6 @@ local function updateZCounter()
     else end 
 end 
 
--- calculate the closeset building in the list
-local function calcClosestBuilding(_square)
-    sourcesq = _square ;
-    local closest = nil;
-    local closestDist = 1000000;
-    if isBuildingListEmpty() == true
-        then closest = sourcesq;
-        else 
-            for id, b in pairs(building_table) do
-                sq = b:getRandomRoom():getRandomSquare();
-                if sq ~= nil
-                    then 
-                    local dist = IsoUtils.DistanceTo(sourcesq:getX(), sourcesq:getY(), sq:getX() , sq:getY())
-                    if dist < closestDist then
-                        closest = sq;
-                        closestDist = dist;
-                    end
-                end
-            end 
-        end 
-    return closest
-end 
-
 local function lureZombieToSoundSquare(zombie, targetsq)
     zombie:pathToSound(targetsq:getX(), targetsq:getY(), targetsq:getZ());
 end
@@ -225,7 +228,7 @@ local function randomLureZombie(zombie)
 
     local x,y,z = targetsq:getX(), targetsq:getY(), targetsq:getZ();
 
-    if ZombRand(1)==0 then
+    if coinFlip() then
         zombie:pathToSound(x,y,z);
     else
         zombie:pathToLocation(x,y,z);
@@ -237,7 +240,7 @@ local function randomLureZombieNearby(zombie)
 
     local x,y,z = targetsq:getX() + ZombRand(-5,5), targetsq:getY() + ZombRand(-5,5), targetsq:getZ();
 
-    if ZombRand(1)==0 then
+    if coinFlip() then
         zombie:pathToSound(x,y,z);
     else
         zombie:pathToLocation(x,y,z);
@@ -245,24 +248,12 @@ local function randomLureZombieNearby(zombie)
 end
 
 local function isZombieIdle(zombie)
-    if zombie ~= nil and zombie:isMoving() == false then 
-        return true;
-    else 
-        return false;
-    end 
-end
-
-local function isSquareOutside(square)
-    if square:isOutside() == false then 
-        return false;
-    else 
-        return true;
-    end
+    return zombie ~= nil and zombie:isMoving() == false;
 end
 
 local function isCharacterOutside(character)
     local currentSquare = character:getCurrentSquare();
-    return isSquareOutside(currentSquare);
+    return currentSquare:isOutside();
 end
 
 local function zResetDayCommand(zombieModData)
@@ -309,20 +300,12 @@ local function zDayRoutine(zombie, zombieModData)
             zombieModData.dayCommandSent = true;
             zombieModData.docile = false;
             randomLureZombie(zombie);
-    -- day, help un-stuck zombie
-    --elseif pillowmod.zCounter >= 1799 and pillowmod.zCounter <= 1899 and zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie) then 
-    --        zombie:setBodyToEat(nil);
-    --        zombieModData.dayCommandSent = true;
-    --        zombieModData.docile = false;
-    --        randomLureZombie(zombie);
     elseif pillowmod.zCounter >= 1900 and zombieHasDayCommand(zombie) then 
         zResetDayCommand(zombieModData);
     end
 end 
 
 local function zNightRoutine(zombie, zombieModData)
-    local pm = pillowmod;
-
     if pillowmod.zCounter == 100 then 
         --zombie:setMoving(true);
         --zombie:setVariable("bMoving", true);
@@ -343,10 +326,6 @@ local function zNightRoutine(zombie, zombieModData)
         zombieModData.nightCommandSent = true;
         zombieModData.docile = false;
         randomLureZombie(zombie);
-    -- night, help un-stuck zombie
-    --elseif pillowmod.zCounter >= 1799 and pillowmod.zCounter <= 1899 and zombieHasNightCommand(zombie) == false and isCharacterOutside(zombie) == false then 
-    --    zombieModData.nightCommandSent = true;
-    --    randomLureZombie(zombie);
     elseif pillowmod.zCounter >= 1900 and zombieHasNightCommand(zombie) then 
         zResetNightCommand(zombieModData);
     end
@@ -384,11 +363,11 @@ local function zCheck(zombie)
     --if zombie is moving for every 100 ticks and is still on same tile, move randomly in a different direction
     if pillowmod.stuckCounter == 100 then
         if zombie:isMoving() == zombieModData.wasMoving and zombie:getCurrentSquare() == zombieModData.lastKnownSquare then
-                if isDay() then
-                    randomLureZombie(zombie);
-                else
-                    randomLureZombieNearby(zombie);
-                end
+            if isDay() then
+                randomLureZombie(zombie);
+            else
+                randomLureZombieNearby(zombie);
+            end
         end
 
         zombieModData.lastKnownSquare = zombie:getCurrentSquare();
@@ -412,17 +391,30 @@ local function aggroZombie(zombie)
     zResetDayCommand(zombieModData);
 end
 
+local function wakeZombie(zombie, wakeAll)
+    if wakeAll then
+        aggroZombie(zombie);
+    else
+        if coinFlip() then
+            aggroZombie(zombie);
+        end
+    end
+end
+
 local function wakeUpZombiesInTargetsRoom(target)
     if target ~= nil then
         local currentRoom = target:getCurrentSquare():getRoom();
-        --print("Waking up zombies in room.");
-        local zlist = player:getCell():getZombieList();
-        if(zlist ~= nil) then
-            for i=0, zlist:size()-1 do
-                local zombie = zlist:get(i);
-                if zombie:getCurrentSquare():getRoom() == currentRoom then 
-                    aggroZombie(zombie);
-                else end
+        if currentRoom ~= nil then
+            local wakeAll = coinFlip();
+            --print("Waking up zombies in room.");
+            local zlist = player:getCell():getZombieList();
+            if(zlist ~= nil) then
+                for i=0, zlist:size()-1 do
+                    local zombie = zlist:get(i);
+                    if zombie:getCurrentSquare():getRoom() == currentRoom then 
+                        wakeZombie(zombie, wakeAll);
+                    end
+                end
             end
         end
     end
@@ -431,14 +423,17 @@ end
 local function wakeUpZombiesInTargetsBuilding(target)
     if target ~= nil then
         local currentBuilding = target:getCurrentSquare():getBuilding();
-        --print("Unlucky! Waking up zombies in building.");
-        local zlist = player:getCell():getZombieList();
-        if(zlist ~= nil) then
-            for i=0, zlist:size()-1 do
-                local zombie = zlist:get(i);
-                if zombie:getCurrentSquare():getBuilding() == currentBuilding then 
-                    aggroZombie(zombie);
-                else end
+        if currentBuilding ~= nil then
+            local wakeAll = coinFlip();
+            --print("Unlucky! Waking up zombies in building.");
+            local zlist = player:getCell():getZombieList();
+            if(zlist ~= nil) then
+                for i=0, zlist:size()-1 do
+                    local zombie = zlist:get(i);
+                    if zombie:getCurrentSquare():getBuilding() == currentBuilding then 
+                        wakeZombie(zombie, wakeAll);
+                    end
+                end
             end
         end
     end
@@ -493,10 +488,9 @@ end
 
 local function onMove()
     stepCounter = stepCounter + 1; 
-    if stepCounter >= 50 then 
+    if stepCounter >= 100 then 
         stepCounter = 0;
         local player = getPlayer();
-
         if isCharacterOutside(player) == false then
             if player:isSneaking() == false then
                 if probabilityCheck(stepLoudlyChance) then --CHANCE: waking zombies if you step loudly
@@ -504,14 +498,9 @@ local function onMove()
                     rollSetZombieActive(player);
                 end
             elseif player:isSneaking() and player:isRunning() then
-                if probabilityCheck(stepLoudlyChance*0.5) then --CHANCE: waking zombies while sneak running
+                if probabilityCheck(stepLoudlyChance*0.5) then --CHANCE: waking zombies while sneak running (only in room)
                     --print("Sneak ran while inside but were too clumsy");
-                    rollSetZombieActive(player);
-                end
-            elseif player:isSneaking() then
-                if probabilityCheck(stepLoudlyChance*0.05) then --CHANCE: waking zombies while sneaking
-                    --print("Sneaked while inside but were too clumsy");
-                    rollSetZombieActive(player);
+                    wakeUpZombiesInTargetsRoom(player);
                 end
             end
         end
@@ -519,7 +508,7 @@ local function onMove()
 end
 
 --DEBUG: UNCOMMENT TO BE ABLE TO RELOAD MOD
---Events.OnTick.Add(initialise);
+Events.OnTick.Add(initialise);
 
 --events
 Events.OnGameStart.Add(initialise);
@@ -527,8 +516,8 @@ Events.OnGameStart.Add(initialise);
 --calc hour must be done at game start and then every hour because it initializes the time of day variable
 Events.EveryHours.Add(calculateHour);
 
---calc rain done every ten minutes to check for rain updates
-Events.EveryTenMinutes.Add(calculateRain);
+--calc rain done every ten minutes to check for rain updates (DISABLED FOR NOW)
+--Events.EveryTenMinutes.Add(calculateRain);
 
 --gridsquare functions that were modified from original fear the rain.
 Events.LoadGridsquare.Add(addBuildingList);
