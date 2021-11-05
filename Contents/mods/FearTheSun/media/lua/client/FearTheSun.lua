@@ -185,18 +185,24 @@ local function isRaining()
     return pillowmod.IsRaining ~= nil and pillowmod.IsRaining;
 end
 
-local function updateZCounter()
+local function updateCounters()
     if pillowmod.stuckCounter == nil or pillowmod.stuckCounter > 100 then
         pillowmod.stuckCounter = 1;
     else
         pillowmod.stuckCounter = pillowmod.stuckCounter + 1;
     end
 
-    if pillowmod.zCounter == nil or pillowmod.zCounter >= 2000
-        then pillowmod.zCounter = 1;
-        elseif pillowmod.zCounter <= 2001
-        then pillowmod.zCounter = pillowmod.zCounter + 1;
-    else end 
+    if pillowmod.zActionCounter == nil or pillowmod.zActionCounter >= 50
+        then pillowmod.zActionCounter = 1;
+        elseif pillowmod.zActionCounter <= 51
+        then pillowmod.zActionCounter = pillowmod.zActionCounter + 1;
+    end
+
+    if pillowmod.zResetCounter == nil or pillowmod.zResetCounter >= 2000
+        then pillowmod.zResetCounter = 1;
+        elseif pillowmod.zResetCounter <= 2001
+        then pillowmod.zResetCounter = pillowmod.zResetCounter + 1;
+    end
 end 
 
 local function lureZombieToSoundSquare(zombie, targetsq)
@@ -288,25 +294,25 @@ end
 
 local function zDayRoutine(zombie, zombieModData)
     -- day, inside
-    if pillowmod.zCounter <= 1000 and zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie) == false then 
+    if pillowmod.zActionCounter <= 25 and zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie) == false then 
             zombieModData.dayCommandSent = true;
             zombie:setUseless(true); 
             zombieModData.docile = true;
             zombie:DoZombieStats();
     -- day, outside, lure via sound or location
-    elseif pillowmod.zCounter >= 300 and pillowmod.zCounter <=1500 and ((zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie)) 
+    elseif pillowmod.zResetCounter > 25 and pillowmod.zResetCounter <= 50 and ((zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie)) 
         or (zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie) and isZombieIdle(zombie))) then 
             zombie:setBodyToEat(nil);
             zombieModData.dayCommandSent = true;
             zombieModData.docile = false;
             randomLureZombie(zombie);
-    elseif pillowmod.zCounter >= 1900 and zombieHasDayCommand(zombie) then 
+    elseif pillowmod.zResetCounter == 2000 and zombieHasDayCommand(zombie) then 
         zResetDayCommand(zombieModData);
     end
 end 
 
 local function zNightRoutine(zombie, zombieModData)
-    if pillowmod.zCounter == 100 then 
+    if pillowmod.zActionCounter == 50 and zombieModData.docile == true then 
         --zombie:setMoving(true);
         --zombie:setVariable("bMoving", true);
         zombie:setFakeDead(false);
@@ -317,16 +323,16 @@ local function zNightRoutine(zombie, zombieModData)
     end
 
     -- night, outside
-    if pillowmod.zCounter <= 1000 and zombieHasNightCommand(zombie) == false and isCharacterOutside(zombie) == true then 
+    if pillowmod.zResetCounter <= 25 and zombieHasNightCommand(zombie) == false and isCharacterOutside(zombie) == true then 
         zombieModData.nightCommandSent = true;
         zombie:Wander();
     -- night, inside, lure via sound or location
-    elseif pillowmod.zCounter >= 300 and pillowmod.zCounter <=1500 and ((zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie) == false) 
+    elseif pillowmod.zResetCounter > 25 and pillowmod.zResetCounter <= 50 and ((zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie) == false) 
     or(zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie) == false and isZombieIdle(zombie))) then 
         zombieModData.nightCommandSent = true;
         zombieModData.docile = false;
         randomLureZombie(zombie);
-    elseif pillowmod.zCounter >= 1900 and zombieHasNightCommand(zombie) then 
+    elseif pillowmod.zResetCounter == 2000 and zombieHasNightCommand(zombie) then 
         zResetNightCommand(zombieModData);
     end
 end
@@ -525,7 +531,7 @@ Events.ReuseGridsquare.Add(removeBuildingList);
 
 --Check for each zombie
 Events.OnZombieUpdate.Add(zCheck);
-Events.OnPlayerUpdate.Add(updateZCounter);
+Events.OnPlayerUpdate.Add(updateCounters);
 
 --player actions that might wake up zombies
 Events.OnWeaponHitCharacter.Add(onHitZombie);
