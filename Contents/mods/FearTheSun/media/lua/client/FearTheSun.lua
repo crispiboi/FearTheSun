@@ -8,6 +8,7 @@ local FearTheSun = FearTheSun or {}
 FearTheSun.FearTheRain = false;
 
 local pillowmod;
+local player;
 local initialised = false;
 local stepCounter = 0;
 
@@ -183,7 +184,8 @@ end
 
 local function initialise()
     if not initialised then
-        pillowmod = getPlayer():getModData();
+        player = getPlayer();
+        pillowmod = player:getModData();
         calculateHour();
         calculateRain();
         calculateChanceModifier();
@@ -219,13 +221,22 @@ local function updateCounters()
     end
 end 
 
-local function lureZombieToSoundSquare(zombie, targetsq)
-    zombie:pathToSound(targetsq:getX(), targetsq:getY(), targetsq:getZ());
+local function lureLocationXYZ(zombie, x, y ,z)
+    zombie:pathToLocationF(x, y ,z);
 end
 
-local function lureZombieToPathSquare(zombie, targetsq)
-    zombie:pathToLocationF(targetsq:getX(), targetsq:getY(), targetsq:getZ());
+local function lureSoundXYZ(zombie, x, y ,z)
+    zombie:pathToLocationF(x, y ,z);
 end
+
+local function lureZombieToSoundSquare(zombie, targetsq)
+    lureSoundXYZ(zombie, targetsq:getX(), targetsq:getY(), targetsq:getZ());
+end
+
+local function lureZombieToLocationSquare(zombie, targetsq)
+    lureLocationXYZ(zombie,targetsq:getX(), targetsq:getY(), targetsq:getZ());
+end
+
 
 local function getRandomOutdoorSquare(character)
     local cell = character:getCurrentSquare():getCell();
@@ -253,12 +264,10 @@ local function randomLureZombie(zombie)
 
     if targetsq == nil then return; end
 
-    local x,y,z = targetsq:getX(), targetsq:getY(), targetsq:getZ();
-
     if coinFlip() then
-        zombie:pathToSound(x,y,z);
+        lureZombieToSoundSquare(zombie, targetsq);
     else
-        zombie:pathToLocationF(x,y,z);
+        lureZombieToLocationSquare(zombie, targetsq);
     end
 end
 
@@ -268,11 +277,11 @@ local function randomLureZombieNearby(zombie)
     if targetsq == nil then return; end
 
     local x,y,z = targetsq:getX() + ZombRand(-5,5), targetsq:getY() + ZombRand(-5,5), targetsq:getZ();
-    
+
     if coinFlip() then
-        zombie:pathToSound(x,y,z);
+        lureSoundXYZ(zombie, x, y, z);
     else
-        zombie:pathToLocationF(x,y,z);
+        lureLocationXYZ(zombie, x, y, z);
     end
 end
 
@@ -436,6 +445,16 @@ local function loadZombie(zombie, zombieModData)
     end
 end
 
+local function walkingOnTheSpot(lastSq, currSq)
+    if lastSq ~= nil and currSq ~= nil then
+        local lx,ly,cx,cy = lastSq:getX(), lastSq:getY(), currSq:getX(), currSq:getY();
+        local dist = IsoUtils.DistanceToSquared(lx, ly, cx, cy) + 0.0;
+        if dist <= 1 then
+            return true; 
+        end
+    end
+end
+
 local function zCheck(zombie)
     if(zombie:isDead()) then
         return;
@@ -450,19 +469,21 @@ local function zCheck(zombie)
 
     --if zombie is moving for every 100 ticks and is still on same tile, move randomly in a different direction
     if pillowmod.stuckCounter == 500 then
-        if zombie:getCurrentSquare() == zombieModData.lastKnownSquare then
-            if isDay() then
+        if walkingOnTheSpot(zombie:getCurrentSquare(), zombieModData.lastKnownSquare) then
+            if isDay() then   
+                --zombie:setDir(IsoDirections.reverse(zombie:getDir()));
+                --zombie:moveForward(1.0);
+                --zombie:WanderFromWindow();
                 randomLureZombie(zombie);
             else
-                zombie:setDir(IsoDirections.reverse(zombie:getDir()));
-                zombie:moveForward(1.0);
-                zombie:WanderFromWindow();
-                --randomLureZombieNearby(zombie);
+                --zombie:setDir(IsoDirections.reverse(zombie:getDir()));
+                --zombie:moveForward(1.0);
+                --zombie:WanderFromWindow();
+                randomLureZombieNearby(zombie);
             end
         end
 
         zombieModData.lastKnownSquare = zombie:getCurrentSquare();
-        zombieModData.wasMoving = zombie:isMoving();
     end
    
     if not isDay() or (FearTheSun.FearTheRain and isRaining()) then --REMOVE RAINING FOR NOW
