@@ -353,13 +353,13 @@ local function zNightRoutine(zombie, zombieModData)
     -- night, outside
     if isCharacterOutside(zombie) == true then 
         zombieModData.nightCommandSent = true;
-        zombie:Wander();
         if pillowmod.zCounter == 1000 or pillowmod.zCounter == 1 then
             zombie:Wander();
+            zombie:DoZombieStats();
         end
     -- night, inside, lure via sound or location
-    elseif pillowmod.zActionCounter > 25 and pillowmod.zActionCounter <= 50 and ((zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie) == false) 
-    or(zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie) == false and isZombieIdle(zombie))) then 
+    elseif pillowmod.zActionCounter > 25 and pillowmod.zActionCounter <= 50 and ((zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie)) 
+    or(not zombieHasNightCommand(zombie) and not isCharacterOutside(zombie) and isZombieIdle(zombie))) then 
         zombieModData.nightCommandSent = true;
         zombieModData.docile = false;
         randomLureZombie(zombie);
