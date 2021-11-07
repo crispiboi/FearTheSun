@@ -4,6 +4,9 @@ building_table = {};
 
 local SPRING, SUMMER, AUTUMN, WINTER = 0,1,2,3;
 
+local FearTheSun = FearTheSun or {}
+FearTheSun.FearTheRain = false;
+
 local pillowmod;
 local initialised = false;
 local stepCounter = 0;
@@ -14,6 +17,15 @@ local wakeBuildingChance = 2; --CHANCE: 2% chance of waking zombies in building
 local stepLoudlyChance = 5; --CHANCE: 5% chance of waking zombies if you step loudly
 local hitChance = 25; --CHANCE: 25% chance of waking zombies on hit
 local collisionChance = 75; --CHANCE: 75% chance of waking zombies on collision
+
+local function teleport(character,x,y,z)
+    character:setX(x);
+    character:setY(y);
+    character:setZ(z);
+    character:setLx(x);
+    character:setLy(y);
+    character:setLz(z);
+end
 
 --as squares are loaded, add the associated buildings to a table
 local function addBuildingList(_square)
@@ -39,31 +51,35 @@ end --end remove building function
 local function isBuildingListEmpty()
     count = 0;
     for i, v in pairs(building_table) do 
-        count = count + 1;
+        return false;
     end
-    return count == 0;
+    return true;
 end
 
 -- calculate the closeset building in the list
-local function calcClosestBuilding(_square)
-    sourcesq = _square ;
+local function calcClosestBuilding(_square, onlyUnexplored) --isAllExplored()
+    local sourcesq = _square ;
     local closest = nil;
     local closestDist = 1000000;
-    if isBuildingListEmpty() == true
-        then closest = sourcesq;
-        else 
-            for id, b in pairs(building_table) do
-                sq = b:getRandomRoom():getRandomSquare();
-                if sq ~= nil
-                    then 
+
+    if isBuildingListEmpty() == true then 
+        closest = sourcesq;
+    else 
+        for id, b in pairs(building_table) do
+            if onlyUnexplored and b:isAllExplored() then --get nearest unexplored building
+                --nothing
+            else
+                local sq = b:getRandomRoom():getRandomFreeSquare();
+                if sq ~= nil then 
                     local dist = IsoUtils.DistanceTo(sourcesq:getX(), sourcesq:getY(), sq:getX() , sq:getY())
                     if dist < closestDist then
                         closest = sq;
                         closestDist = dist;
                     end
                 end
-            end 
+            end
         end 
+    end 
     return closest
 end 
 
@@ -120,9 +136,7 @@ end
 
 --calc the IsRaining variable
 local function calculateRain()
-    if RainManager.isRaining() then
-        pillowmod.IsRaining = false;
-    end
+    pillowmod.IsRaining = RainManager.isRaining();
 end
 
 local function calculateChanceModifier()
@@ -198,10 +212,10 @@ local function updateCounters()
         then pillowmod.zActionCounter = pillowmod.zActionCounter + 1;
     end
 
-    if pillowmod.zResetCounter == nil or pillowmod.zResetCounter >= 2000
-        then pillowmod.zResetCounter = 1;
-        elseif pillowmod.zResetCounter <= 2001
-        then pillowmod.zResetCounter = pillowmod.zResetCounter + 1;
+    if pillowmod.zCounter == nil or pillowmod.zCounter >= 2000
+        then pillowmod.zCounter = 1;
+        elseif pillowmod.zCounter <= 2001
+        then pillowmod.zCounter = pillowmod.zCounter + 1;
     end
 end 
 
@@ -220,7 +234,12 @@ end
 
 local function getSquareInClosestBuilding(character)
     local sourcesq = character:getCurrentSquare();
-    return calcClosestBuilding(sourcesq);
+    return calcClosestBuilding(sourcesq, false);
+end
+
+local function getSquareInClosestUnexploredBuilding(character)
+    local sourcesq = character:getCurrentSquare();
+    return calcClosestBuilding(sourcesq, true);
 end
 
 local function randomLureZombie(zombie)
@@ -231,6 +250,8 @@ local function randomLureZombie(zombie)
     else
         targetsq = getRandomOutdoorSquare(zombie);
     end
+
+    if targetsq == nil then return; end;
 
     local x,y,z = targetsq:getX(), targetsq:getY(), targetsq:getZ();
 
@@ -243,6 +264,8 @@ end
 
 local function randomLureZombieNearby(zombie)
     local targetsq = zombie:getCurrentSquare();
+
+    if targetsq == nil then return; end;
 
     local x,y,z = targetsq:getX() + ZombRand(-5,5), targetsq:getY() + ZombRand(-5,5), targetsq:getZ();
 
@@ -294,19 +317,24 @@ end
 
 local function zDayRoutine(zombie, zombieModData)
     -- day, inside
-    if pillowmod.zActionCounter <= 25 and zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie) == false then 
+    if isCharacterOutside(zombie) == false then 
+        if not zombieModData.docile then
             zombieModData.dayCommandSent = true;
             zombie:setUseless(true); 
             zombieModData.docile = true;
             zombie:DoZombieStats();
+        end
+        if pillowmod.zCounter == 1000 or pillowmod.zCounter == 1 then
+            randomLureZombie(zombie); --wander around the room
+        end
     -- day, outside, lure via sound or location
-    elseif pillowmod.zResetCounter > 25 and pillowmod.zResetCounter <= 50 and ((zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie)) 
+    elseif pillowmod.zActionCounter > 25 and pillowmod.zActionCounter <= 50 and ((zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie)) 
         or (zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie) and isZombieIdle(zombie))) then 
             zombie:setBodyToEat(nil);
             zombieModData.dayCommandSent = true;
             zombieModData.docile = false;
             randomLureZombie(zombie);
-    elseif pillowmod.zResetCounter == 2000 and zombieHasDayCommand(zombie) then 
+    elseif pillowmod.zCounter == 2000 and zombieHasDayCommand(zombie) then 
         zResetDayCommand(zombieModData);
     end
 end 
@@ -323,26 +351,34 @@ local function zNightRoutine(zombie, zombieModData)
     end
 
     -- night, outside
-    if pillowmod.zResetCounter <= 25 and zombieHasNightCommand(zombie) == false and isCharacterOutside(zombie) == true then 
+    if isCharacterOutside(zombie) == true then 
         zombieModData.nightCommandSent = true;
         zombie:Wander();
+        if pillowmod.zCounter == 1000 or pillowmod.zCounter == 1 then
+            zombie:Wander();
+        end
     -- night, inside, lure via sound or location
-    elseif pillowmod.zResetCounter > 25 and pillowmod.zResetCounter <= 50 and ((zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie) == false) 
+    elseif pillowmod.zActionCounter > 25 and pillowmod.zActionCounter <= 50 and ((zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie) == false) 
     or(zombieHasNightCommand(zombie) == false and not isCharacterOutside(zombie) == false and isZombieIdle(zombie))) then 
         zombieModData.nightCommandSent = true;
         zombieModData.docile = false;
         randomLureZombie(zombie);
-    elseif pillowmod.zResetCounter == 2000 and zombieHasNightCommand(zombie) then 
+    elseif pillowmod.zCounter == 2000 and zombieHasNightCommand(zombie) then 
         zResetNightCommand(zombieModData);
     end
 end
 
 --return true if aggro, false if not aggro
 local function updateAggro(zombie, zombieModData)
+    if zombieModData.noTargetTick == nil then
+        zombieModData.noTargetTick = 0;
+    end
+
     if zombie:getTarget() ~= nil then
         zombieModData.hasAggro = true;
         zombieModData.noTargetTick = 1000;
-    else
+        return true;
+    elseif zombieModData.noTargetTick > 0 then
         zombieModData.hasAggro = false;
         if zombieModData.noTargetTick == nil then 
             zombieModData.noTargetTick = 0 
@@ -351,8 +387,47 @@ local function updateAggro(zombie, zombieModData)
         end
     end
 
-    --if no target for 5000 ticks, return to regular programming
+    --if no target for 1000 ticks, return to regular programming
     return zombieModData.noTargetTick > 0;
+end
+
+--Handles unseen zombies (if zombie loaded in during the day, teleport them to a random unexplored building)
+local function loadZombie(zombie, zombieModData)
+    if zombieModData.loaded == nil then
+        zombieModData.loaded = true;
+        local pm = pillowmod;
+        if isDay() or (FearTheSun.FearTheRain and not isRaining()) then
+            local player = getPlayer();
+            if not player:CanSee(zombie) then
+                local sq = getSquareInClosestUnexploredBuilding(zombie);
+                
+                if sq == nil then return; end
+                
+                local building = sq:getBuilding();
+
+                if building == player:getCurrentSquare():getBuilding() then
+                    return;
+                end
+                
+                if not sq:isSeen(0) then
+                    teleport(zombie, sq:getX(), sq:getY(), sq:getZ());
+                    zombieModData.dayCommandSent = true;
+                    zombie:setUseless(true); 
+                    zombieModData.docile = true;
+                    zombie:DoZombieStats();
+
+                    --randomly have a chance to smash a random window in building
+                    if coinFlip() then
+                        local randomWindow = building:getRandomFirstFloorWindow();
+                        if randomWindow ~= nil then
+                            randomWindow:smashWindow();
+                            randomWindow:addBrokenGlass(coinFlip());
+                        end
+                    end
+                end
+            end
+        end
+    end
 end
 
 local function zCheck(zombie)
@@ -361,6 +436,7 @@ local function zCheck(zombie)
     end
     
     local zombieModData = zombie:getModData();
+    loadZombie(zombie, zombieModData);
 
     if updateAggro(zombie, zombieModData) then --if aggro'd, let zombie do its thing
         return;
@@ -380,10 +456,10 @@ local function zCheck(zombie)
         zombieModData.wasMoving = zombie:isMoving();
     end
    
-    if isDay() then --and not isRaining() then --REMOVE RAINING FOR NOW
-        zDayRoutine(zombie, zombieModData);
-    else
+    if not isDay() or (FearTheSun.FearTheRain and isRaining()) then --REMOVE RAINING FOR NOW
         zNightRoutine(zombie, zombieModData);
+    else
+        zDayRoutine(zombie, zombieModData);
     end
 end
 
@@ -523,7 +599,7 @@ Events.OnGameStart.Add(initialise);
 Events.EveryHours.Add(calculateHour);
 
 --calc rain done every ten minutes to check for rain updates (DISABLED FOR NOW)
---Events.EveryTenMinutes.Add(calculateRain);
+Events.EveryTenMinutes.Add(calculateRain);
 
 --gridsquare functions that were modified from original fear the rain.
 Events.LoadGridsquare.Add(addBuildingList);
@@ -537,3 +613,35 @@ Events.OnPlayerUpdate.Add(updateCounters);
 Events.OnWeaponHitCharacter.Add(onHitZombie);
 Events.OnCharacterCollide.Add(onCollideWithZombie);
 Events.OnPlayerMove.Add(onMove);
+
+----- MOD OPTIONS SUPPORT ------
+if ModOptions and ModOptions.getInstance then
+    local function fearTheSunOnModOptionsApply(optionValues)
+		FearTheSun.FearTheRain = optionValues.settings.options.FearTheRain
+    end
+
+	function fearTheSunOnModOptionsApplyInGame(optionValues)
+		fearTheSunOnModOptionsApply(optionValues);
+    end
+
+    local SETTINGS = {
+        options_data = {
+            FearTheRain = {
+                name = getText("UI_FearTheRain"),
+                tooltip = getText("UI_FearTheRainDesc"),
+                default = false,
+                OnApplyMainMenu = fearTheSunOnModOptionsApply,
+                OnApplyInGame = fearTheSunOnModOptionsApplyInGame,
+            },
+        },
+
+        mod_id = 'FearTheSun',
+        mod_shortname = getText("UI_ModName"),
+        mod_fullname = getText("UI_ModName"),
+    }
+
+    ModOptions:getInstance(SETTINGS);
+    ModOptions:loadFile();
+	
+	Events.OnGameStart.Add(function() fearTheSunOnModOptionsApplyInGame({ settings = SETTINGS }); end);
+end
