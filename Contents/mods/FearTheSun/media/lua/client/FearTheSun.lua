@@ -200,22 +200,22 @@ local function isRaining()
 end
 
 local function updateCounters()
-    if pillowmod.stuckCounter == nil or pillowmod.stuckCounter > 100 then
+    if pillowmod.stuckCounter == nil or pillowmod.stuckCounter > 500 then
         pillowmod.stuckCounter = 1;
-    else
+    elseif pillowmod.stuckCounter <= 501 then
         pillowmod.stuckCounter = pillowmod.stuckCounter + 1;
     end
 
-    if pillowmod.zActionCounter == nil or pillowmod.zActionCounter >= 50
-        then pillowmod.zActionCounter = 1;
-        elseif pillowmod.zActionCounter <= 51
-        then pillowmod.zActionCounter = pillowmod.zActionCounter + 1;
+    if pillowmod.zActionCounter == nil or pillowmod.zActionCounter >= 50 then 
+        pillowmod.zActionCounter = 1;
+    elseif pillowmod.zActionCounter <= 51 then 
+        pillowmod.zActionCounter = pillowmod.zActionCounter + 1;
     end
 
-    if pillowmod.zCounter == nil or pillowmod.zCounter >= 2000
-        then pillowmod.zCounter = 1;
-        elseif pillowmod.zCounter <= 2001
-        then pillowmod.zCounter = pillowmod.zCounter + 1;
+    if pillowmod.zCounter == nil or pillowmod.zCounter >= 2000 then 
+        pillowmod.zCounter = 1;
+    elseif pillowmod.zCounter <= 2001 then 
+        pillowmod.zCounter = pillowmod.zCounter + 1;
     end
 end 
 
@@ -224,7 +224,7 @@ local function lureZombieToSoundSquare(zombie, targetsq)
 end
 
 local function lureZombieToPathSquare(zombie, targetsq)
-    zombie:pathToLocation(targetsq:getX(), targetsq:getY(), targetsq:getZ());
+    zombie:pathToLocationF(targetsq:getX(), targetsq:getY(), targetsq:getZ());
 end
 
 local function getRandomOutdoorSquare(character)
@@ -251,28 +251,28 @@ local function randomLureZombie(zombie)
         targetsq = getRandomOutdoorSquare(zombie);
     end
 
-    if targetsq == nil then return; end;
+    if targetsq == nil then return; end
 
     local x,y,z = targetsq:getX(), targetsq:getY(), targetsq:getZ();
 
     if coinFlip() then
         zombie:pathToSound(x,y,z);
     else
-        zombie:pathToLocation(x,y,z);
+        zombie:pathToLocationF(x,y,z);
     end
 end
 
 local function randomLureZombieNearby(zombie)
     local targetsq = zombie:getCurrentSquare();
 
-    if targetsq == nil then return; end;
+    if targetsq == nil then return; end
 
     local x,y,z = targetsq:getX() + ZombRand(-5,5), targetsq:getY() + ZombRand(-5,5), targetsq:getZ();
-
+    
     if coinFlip() then
         zombie:pathToSound(x,y,z);
     else
-        zombie:pathToLocation(x,y,z);
+        zombie:pathToLocationF(x,y,z);
     end
 end
 
@@ -333,6 +333,12 @@ local function zDayRoutine(zombie, zombieModData)
             zombie:setBodyToEat(nil);
             zombieModData.dayCommandSent = true;
             zombieModData.docile = false;
+
+            if zombie:isSitAgainstWall() then
+                zombie:setSitAgainstWall(false);
+            end
+
+            zombie:DoZombieStats();
             randomLureZombie(zombie);
     elseif pillowmod.zCounter == 2000 and zombieHasDayCommand(zombie) then 
         zResetDayCommand(zombieModData);
@@ -354,7 +360,7 @@ local function zNightRoutine(zombie, zombieModData)
     if isCharacterOutside(zombie) == true then 
         zombieModData.nightCommandSent = true;
         if pillowmod.zCounter == 1000 or pillowmod.zCounter == 1 then
-            zombie:Wander();
+            zombie:WanderFromWindow();
             zombie:DoZombieStats();
         end
     -- night, inside, lure via sound or location
@@ -443,12 +449,15 @@ local function zCheck(zombie)
     end
 
     --if zombie is moving for every 100 ticks and is still on same tile, move randomly in a different direction
-    if pillowmod.stuckCounter == 100 then
-        if zombie:isMoving() == zombieModData.wasMoving and zombie:getCurrentSquare() == zombieModData.lastKnownSquare then
+    if pillowmod.stuckCounter == 500 then
+        if zombie:getCurrentSquare() == zombieModData.lastKnownSquare then
             if isDay() then
                 randomLureZombie(zombie);
             else
-                randomLureZombieNearby(zombie);
+                zombie:setDir(IsoDirections.reverse(zombie:getDir()));
+                zombie:moveForward(1.0);
+                zombie:WanderFromWindow();
+                --randomLureZombieNearby(zombie);
             end
         end
 
