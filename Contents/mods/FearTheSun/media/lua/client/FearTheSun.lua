@@ -211,6 +211,17 @@ local function updateCounters()
     end
 end 
 
+<<<<<<< Updated upstream
+=======
+local function lureLocationXYZ(zombie, x, y ,z)
+    zombie:pathToLocationF(x, y ,z);
+end
+
+local function lureSoundXYZ(zombie, x, y ,z)
+    zombie:pathToSound(x, y ,z);
+end
+
+>>>>>>> Stashed changes
 local function lureZombieToSoundSquare(zombie, targetsq)
     zombie:pathToSound(targetsq:getX(), targetsq:getY(), targetsq:getZ());
 end
@@ -367,6 +378,10 @@ local function zCheck(zombie)
     end
     
     local zombieModData = zombie:getModData();
+<<<<<<< Updated upstream
+=======
+    --loadZombie(zombie, zombieModData); turn off load zombie function for now, seems to result in zombies that spawn outside useless already
+>>>>>>> Stashed changes
 
     if updateAggro(zombie, zombieModData) then --if aggro'd, let zombie do its thing
         return;
