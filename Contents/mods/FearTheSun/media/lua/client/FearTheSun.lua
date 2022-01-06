@@ -45,9 +45,15 @@ local function isBuildingListEmpty()
 end
 
 -- calculate the closeset building in the list
+<<<<<<< Updated upstream
 local function calcClosestBuilding(_square)
     sourcesq = _square ;
     local closest = nil;
+=======
+local function calcClosestBuilding(_square, onlyUnexplored) --isAllExplored()
+    local sourcesq = _square ;
+    local closest = sourcesq;
+>>>>>>> Stashed changes
     local closestDist = 1000000;
     if isBuildingListEmpty() == true
         then closest = sourcesq;
