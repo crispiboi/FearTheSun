@@ -226,7 +226,7 @@ local function lureLocationXYZ(zombie, x, y ,z)
 end
 
 local function lureSoundXYZ(zombie, x, y ,z)
-    zombie:pathToLocationF(x, y ,z);
+    zombie:pathToSound(targetsq:getX(), targetsq:getY(), targetsq:getZ());
 end
 
 local function lureZombieToSoundSquare(zombie, targetsq)
@@ -461,7 +461,8 @@ local function zCheck(zombie)
     end
     
     local zombieModData = zombie:getModData();
-    loadZombie(zombie, zombieModData);
+    --turn off load zombie, causing many useless zombies outside
+    --loadZombie(zombie, zombieModData); 
 
     if updateAggro(zombie, zombieModData) then --if aggro'd, let zombie do its thing
         return;
