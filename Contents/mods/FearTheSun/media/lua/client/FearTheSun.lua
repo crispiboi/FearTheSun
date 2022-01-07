@@ -226,7 +226,7 @@ local function lureLocationXYZ(zombie, x, y ,z)
 end
 
 local function lureSoundXYZ(zombie, x, y ,z)
-    zombie:pathToSound(targetsq:getX(), targetsq:getY(), targetsq:getZ());
+    zombie:pathToSound(x, y ,z);
 end
 
 local function lureZombieToSoundSquare(zombie, targetsq)
