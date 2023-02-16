@@ -18,7 +18,7 @@ local wakeBuildingChance = 2; --CHANCE: 2% chance of waking zombies in building
 local stepLoudlyChance = 5; --CHANCE: 5% chance of waking zombies if you step loudly
 local hitChance = 25; --CHANCE: 25% chance of waking zombies on hit
 local collisionChance = 75; --CHANCE: 75% chance of waking zombies on collision
-local lureChance = 25; --CHANCE: 25% chance of luring zombie
+local lureChance = 75; --CHANCE: 25% chance of luring zombie
 
 local function teleport(character,x,y,z)
     character:setX(x);
@@ -278,6 +278,9 @@ local function randomLureZombieFar(zombie)
     end
 end
 
+--Main random lure function that calls into others
+--daytime gets a square inside, nighttime gets a square outside
+--if the target is too far, 25 tiles, just send the zombie walking far, handling rural cases wakeAll
 local function randomLureZombie(zombie)
     local targetsq = zombie:getCurrentSquare();
 
@@ -330,6 +333,11 @@ local function zResetNightCommand(zombieModData)
     zombieModData.nightCommandSent = false;
 end
 
+local function zResetAllCommmands(zombieModData)
+    zombieModData.dayCommandSent = false;
+    zombieModData.nightCommandSent = false;
+end
+
 local function zombieHasDayCommand(zombie)
     local zombieModData = zombie:getModData();
 
@@ -352,7 +360,19 @@ local function zombieHasNightCommand(zombie)
     end
 end
 
+local function setZombieActive(zombie,zombieModData)
+    zombie:setFakeDead(false);
+    zombie:setUseless(false); 
+    zombieModData.docile = false;
+    zombie:DoZombieStats();
+end 
+
+--daytime routine 2023-02-15 removed making some zombies wander inside using zCounter tick 
 local function zDayRoutine(zombie, zombieModData)
+
+    if zombieHasNightCommand(zombie) then
+        zResetAllCommmands(zombieModData);
+    end 
     
     --daytime zombie state checks
     if isCharacterOutside(zombie) == false then 
@@ -361,15 +381,12 @@ local function zDayRoutine(zombie, zombieModData)
             zombie:setUseless(true); 
             zombieModData.docile = true;
             zombie:DoZombieStats();
-            zResetNightCommand(zombieModData);
-        end
-        if pillowmod.zCounter == 1000 or pillowmod.zCounter == 1 then
-            -- randomLureZombie(zombie); --wander around the room 2023-02-15 turned this off, zombies were not idling inside. This should be a random low chance
         end
 
     --daytime 
     elseif pillowmod.zActionCounter > 25 and pillowmod.zActionCounter <= 50 and ((zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie)) 
-        or (zombieHasDayCommand(zombie) == false and isCharacterOutside(zombie) and isZombieIdle(zombie))) then 
+        or ( isCharacterOutside(zombie) and isZombieIdle(zombie))) then 
+        --remove check for HasDayCommand = false from OR statement above. zombieHasDayCommand(zombie) == false and
             zombie:setBodyToEat(nil);
             zombie:setUseless(false); -- add 2023-02-15 to fix bug of docile outside zombies
             zombieModData.dayCommandSent = true;
@@ -389,31 +406,32 @@ local function zDayRoutine(zombie, zombieModData)
     end
 end 
 
+--at night zombies should get a random chance to be lured out of buildings
+--it breaks immersion to have the whole population moving
+--2023-02-15 remove action counter condition from reset conditions.
 local function zNightRoutine(zombie, zombieModData)
-    --at night zombies should get a random chance to be lured out of buildings
-    --it breaks immersion to have the whole population moving
+
+    if zombieHasDayCommand(zombie) then
+        zResetAllCommmands(zombieModData);
+    end
         
-    
     --reset zombies to an active state
-    if zombieModData.docile == true --and pillowmod.zActionCounter == 50 --2023-02-15 remove action counter condition, zombies should not be docile at night
+    if zombieModData.docile == true 
       then 
         zombie:setFakeDead(false);
         zombie:setUseless(false); 
         zombieModData.docile = false;
         zombie:DoZombieStats();
-        zResetDayCommand(zombieModData);
-        
     end
 
-    --randomly lure some zombies. All zombies get night command sent.
-    if not isCharacterOutside(zombie) and not zombieHasNightCommand(zombie) and pillowmod.zActionCounter > 25 and pillowmod.zActionCounter <= 50 then
+    --randomly lure some zombies. All zombies get one night command sent.
+    --all of these conditions may not be neccesary but get the best behavior as of 2023-02-16
+    if isCharacterOutside(zombie) == false and zombieHasNightCommand(zombie) == false and pillowmod.zActionCounter > 25 and pillowmod.zActionCounter <= 50 
+        or (isCharacterOutside(zombie) == false and isZombieIdle(zombie) and zombieHasNightCommand(zombie)== false) then
         if probabilityCheck(lureChance) then
-            randomLureZombie(zombie);
-            zombieModData.nightCommandSent = true;
-        else 
-            zombieModData.nightCommandSent = true;
+            randomLureZombie(zombie);    
         end
-        zResetDayCommand(zombieModData); 
+        zombieModData.nightCommandSent = true;
     end 
 
 end
@@ -441,44 +459,19 @@ local function updateAggro(zombie, zombieModData)
     return zombieModData.noTargetTick > 0;
 end
 
---Handles unseen zombies (if zombie loaded in during the day, teleport them to a random unexplored building)
--- 2023-02-15 This function is not enabled
-local function loadZombie(zombie, zombieModData)
-    if zombieModData.loaded == nil then
-        zombieModData.loaded = true;
-        local pm = pillowmod;
-        if isDay() or (FearTheSun.FearTheRain and not isRaining()) then
-            local player = getPlayer();
-            if not player:CanSee(zombie) then
-                local sq = getSquareInClosestUnexploredBuilding(zombie);
-                
-                if sq == nil then return; end
-                
-                local building = sq:getBuilding();
 
-                if building == player:getCurrentSquare():getBuilding() then
-                    return;
-                end
-                
-                if not sq:isSeen(0) then
-                    teleport(zombie, sq:getX(), sq:getY(), sq:getZ());
-                    zombieModData.dayCommandSent = true;
-                    zombie:setUseless(true); 
-                    zombieModData.docile = true;
-                    zombie:DoZombieStats();
-
-                    --randomly have a chance to smash a random window in building
-                    if coinFlip() then
-                        local randomWindow = building:getRandomFirstFloorWindow();
-                        if randomWindow ~= nil then
-                            randomWindow:smashWindow();
-                            randomWindow:addBrokenGlass(coinFlip());
-                        end
-                    end
-                end
-            end
-        end
-    end
+-- 2023-02-16 this function reused to intialize zombies with their states required for the mod.
+--buildings are loaded after zombies so they never receive a building when they are initialized
+local function loadZombie(zombie)
+    local zombieModData = zombie:getModData();
+    zResetAllCommmands(zombieModData); 
+    zombie:setFakeDead(false);
+    zombie:setUseless(false); 
+    zombieModData.docile = false;
+    zombieModData.loaded = true;
+    zombieModData.hasAggro = false;
+    zombie:DoZombieStats();
+    randomLureZombie(zombie);
 end
 
 local function walkingOnTheSpot(lastSq, currSq)
@@ -491,14 +484,20 @@ local function walkingOnTheSpot(lastSq, currSq)
     end
 end
 
+--Main zcheck routine OnZombieupdate.
+--load zombie function is called here and was significantly modified removing all teleporting functions.
+--Try to get out of this function as quickly as possible for dead zombies, uninitiated zombies, and aggroed zombies
 local function zCheck(zombie)
     if(zombie:isDead()) then
         return;
     end
-    
+
     local zombieModData = zombie:getModData();
-    --turn off load zombie, causing many useless zombies outside
-    --loadZombie(zombie, zombieModData); 
+    --2023-02-16 enable load zombie function again with logic checking for it being loaded
+    if zombieModData.loaded == nil 
+        then
+        loadZombie(zombie, zombieModData); 
+    end 
 
     if updateAggro(zombie, zombieModData) then --if aggro'd, let zombie do its thing
         return;
@@ -510,13 +509,9 @@ local function zCheck(zombie)
             if isDay() then   
                 randomLureZombie(zombie);
             else
-                --zombie:setDir(IsoDirections.reverse(zombie:getDir()));
-                --zombie:moveForward(1.0);
-                --zombie:WanderFromWindow();
                 randomLureZombieNearby(zombie);
             end
         end
-
         zombieModData.lastKnownSquare = zombie:getCurrentSquare();
     end
    
