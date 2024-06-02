@@ -147,7 +147,7 @@ local function calculateChanceModifier()
     --TODO: maybe add modifier based on skill levels
 
     pillowmod.isLucky = player:HasTrait("Lucky");
-    pillowmod.isUnlucky = player:HasTrait("Lucky");
+    pillowmod.isUnlucky = player:HasTrait("Unlucky");
 
     pillowmod.isGraceful = player:HasTrait("Graceful");
     pillowmod.isClumsy = player:HasTrait("Clumsy");
