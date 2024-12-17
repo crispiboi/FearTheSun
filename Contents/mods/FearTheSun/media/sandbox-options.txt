@@ -1,0 +1,71 @@
+VERSION = 1,
+
+option FTS.sneakLoudlyChance = {
+	type = double,
+	min = 0.0,
+	max = 100,
+	default = 0.25,
+
+	page = FTS,
+	translation = FTS.sneakLoudlyChance,
+	_tooltip = FTS.sneakLoudlyChanceTooltip,
+}
+
+option FTS.stepLoudlyChance = {
+	type = double,
+	min = 0.0,
+	max = 100,
+	default = 10.0,
+
+	page = FTS,
+	translation = FTS.stepLoudlyChance,
+	_tooltip = FTS.stepLoudlyChanceTooltip,
+}
+
+option FTS.wakeBuildingChance = {
+	type = double,
+	min = 0.0,
+	max = 100,
+	default = 2.0,
+
+	page = FTS,
+	translation = FTS.wakeBuildingChance,
+	_tooltip = FTS.wakeBuildingChanceTooltip,
+}
+
+
+option FTS.hitChance = {
+	type = double,
+	min = 0.0,
+	max = 100,
+	default = 75.0,
+
+	page = FTS,
+	translation = FTS.hitChance,
+	_tooltip = FTS.hitChanceTooltip,
+}
+
+option FTS.collisionChance = {
+	type = double,
+	min = 0.0,
+	max = 100,
+	default = 75.0,
+
+	page = FTS,
+	translation = FTS.collisionChance,
+	_tooltip = FTS.collisionChanceTooltip,
+}
+
+
+option FTS.lureChance = {
+	type = double,
+	min = 0.0,
+	max = 100,
+	default = 75.0,
+
+	page = FTS,
+	translation = FTS.lureChance,
+	_tooltip = FTS.lureChanceTooltip,
+}
+
+

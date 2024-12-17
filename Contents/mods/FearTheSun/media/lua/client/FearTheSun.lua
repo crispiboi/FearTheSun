@@ -12,13 +12,14 @@ local player;
 local initialised = false;
 local stepCounter = 0;
 
---Modifier constants
+--Initiate modifiers
 local sneakLoudlyChance = 0.25; --CHANCE: 0.25% chance of waking zombies while sneaking
-local wakeBuildingChance = 2; --CHANCE: 2% chance of waking zombies in building
-local stepLoudlyChance = 5; --CHANCE: 5% chance of waking zombies if you step loudly
-local hitChance = 25; --CHANCE: 25% chance of waking zombies on hit
-local collisionChance = 75; --CHANCE: 75% chance of waking zombies on collision
-local lureChance = 75; --CHANCE: 25% chance of luring zombie
+local wakeBuildingChance = 5; --CHANCE: 2% chance of waking zombies in building
+local stepLoudlyChance = 10; --CHANCE: 5% chance of waking zombies if you step loudly
+local hitChance = 99; --CHANCE: 25% chance of waking zombies on hit
+local collisionChance = 88; --CHANCE: 75% chance of waking zombies on collision
+local lureChance = 75; --CHANCE: 25% chance of luring zombie outside
+
 
 local function teleport(character,x,y,z)
     character:setX(x);
@@ -175,6 +176,13 @@ local function calculateChanceModifier()
     elseif pillowmod.isClumsy then
         conspicuousModifier = conspicuousModifier + 0.1;
     end
+    
+    sneakLoudlyChance = SandboxVars.FTS.sneakLoudlyChance;
+    stepLoudlyChance = SandboxVars.FTS.stepLoudlyChance;
+    wakeBuildingChance = SandboxVars.FTS.wakeBuildingChance;
+    hitChance = SandboxVars.FTS.hitChance;
+    collisionChance = SandboxVars.FTS.collisionChance;
+    lureChance = SandboxVars.FTS.lureChance;
 
     sneakLoudlyChance = sneakLoudlyChance * luckyModifier * conspicuousModifier * gracefulModifier;
     stepLoudlyChance = stepLoudlyChance * luckyModifier * conspicuousModifier * gracefulModifier;
@@ -674,33 +682,33 @@ Events.OnCharacterCollide.Add(onCollideWithZombie);
 Events.OnPlayerMove.Add(onMove);
 
 ----- MOD OPTIONS SUPPORT ------
-if ModOptions and ModOptions.getInstance then
-    local function fearTheSunOnModOptionsApply(optionValues)
-		FearTheSun.FearTheRain = optionValues.settings.options.FearTheRain
-    end
+-- if ModOptions and ModOptions.getInstance then
+--     local function fearTheSunOnModOptionsApply(optionValues)
+-- 		FearTheSun.FearTheRain = optionValues.settings.options.FearTheRain
+--     end
 
-	function fearTheSunOnModOptionsApplyInGame(optionValues)
-		fearTheSunOnModOptionsApply(optionValues);
-    end
+-- 	function fearTheSunOnModOptionsApplyInGame(optionValues)
+-- 		fearTheSunOnModOptionsApply(optionValues);
+--     end
 
-    local SETTINGS = {
-        options_data = {
-            FearTheRain = {
-                name = getText("UI_FearTheRain"),
-                tooltip = getText("UI_FearTheRainDesc"),
-                default = false,
-                OnApplyMainMenu = fearTheSunOnModOptionsApply,
-                OnApplyInGame = fearTheSunOnModOptionsApplyInGame,
-            },
-        },
+--     local SETTINGS = {
+--         options_data = {
+--             FearTheRain = {
+--                 name = getText("UI_FearTheRain"),
+--                 tooltip = getText("UI_FearTheRainDesc"),
+--                 default = false,
+--                 OnApplyMainMenu = fearTheSunOnModOptionsApply,
+--                 OnApplyInGame = fearTheSunOnModOptionsApplyInGame,
+--             },
+--         },
 
-        mod_id = 'FearTheSun',
-        mod_shortname = getText("UI_ModName"),
-        mod_fullname = getText("UI_ModName"),
-    }
+--         mod_id = 'FearTheSun',
+--         mod_shortname = getText("UI_ModName"),
+--         mod_fullname = getText("UI_ModName"),
+--     }
 
-    ModOptions:getInstance(SETTINGS);
-    ModOptions:loadFile();
+--     ModOptions:getInstance(SETTINGS);
+--     ModOptions:loadFile();
 	
-	Events.OnGameStart.Add(function() fearTheSunOnModOptionsApplyInGame({ settings = SETTINGS }); end);
-end
+-- 	Events.OnGameStart.Add(function() fearTheSunOnModOptionsApplyInGame({ settings = SETTINGS }); end);
+-- end

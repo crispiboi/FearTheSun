@@ -1,0 +1,21 @@
+Sandbox_EN = {
+    Sandbox_FTS = "Fear The Sun",
+
+    Sandbox_FTS.sneakLoudlyChance = "Sneak Loudly Chance",
+    Sandbox_FTS.sneakLoudlyChance_tooltip = "chance of waking zombies while sneaking",
+
+    Sandbox_FTS.stepLoudlyChance = "Step Loudly Chance",
+    Sandbox_FTS.stepLoudlyChance_tooltip = "chance of waking zombies if you step loudly",
+
+    Sandbox_FTS.wakeBuildingChance = "Wake Building Chance",
+    Sandbox_FTS.wakeBuildingChance_tooltip = "chance of waking zombies in building",
+
+    Sandbox_FTS.hitChance = "Hit Wake Chance",
+    Sandbox_FTS.hitChance_tooltip = "chance of waking zombies on hit",
+
+    Sandbox_FTS.collisionChance = "Collision Wake Chance",
+    Sandbox_FTS.collisionChance_tooltip = "chance of waking zombies on collision",
+
+    Sandbox_FTS.lureChance = "Lure Night Chance",
+    Sandbox_FTS.lureChance_tooltip = "chance of luring zombies outside at nighttime, independent of spotting player.",
+}
